@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user.dart';
+import '../services/api_service.dart';
 
 class AuthProvider extends ChangeNotifier {
   AppUser? _user;
@@ -26,102 +27,83 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> register({
-    required String name,
-    required String phone,
-    required String district,
-    required String village,
-    required String password,
-  }) async {
-    _loading = true;
-    _error   = '';
-    notifyListeners();
+Future<bool> register({
+  required String name,
+  required String phone,
+  required String district,
+  required String village,
+  required String password,
+}) async {
+  _loading = true;
+  _error   = '';
+  notifyListeners();
 
-    await Future.delayed(const Duration(seconds: 1));
-
-    // Simulate registration — in production, POST to /api/auth/register
-    // For now store as pending user
-    _user = AppUser(
-      id:        DateTime.now().millisecondsSinceEpoch.toString(),
-      name:      name,
-      phone:     phone,
-      district:  district,
-      village:   village,
-      role:      UserRole.farmer,
-      status:    UserStatus.pending,
-      createdAt: DateTime.now(),
+  try {
+    final data = await ApiService.register(
+      name:     name,
+      phone:    phone,
+      password: password,
+      district: district,
+      village:  village,
     );
 
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('user_data', jsonEncode({
-      'id':         _user!.id,
-      'name':       name,
-      'phone':      phone,
-      'district':   district,
-      'village':    village,
-      'role':       'farmer',
-      'status':     'pending',
-      'created_at': DateTime.now().toIso8601String(),
-    }));
-
-    _loading = false;
-    notifyListeners();
-    return true;
-  }
-
-  Future<bool> login({
-    required String phone,
-    required String password,
-  }) async {
-    _loading = true;
-    _error   = '';
-    notifyListeners();
-
-    await Future.delayed(const Duration(seconds: 1));
-
-    // Admin hardcoded for demo — in production verify against DB
-    if (phone == '9632838185' && password == 'admin123') {
-      _user = AppUser(
-        id:        'admin_1',
-        name:      'Admin',
-        phone:     phone,
-        district:  'All',
-        village:   '',
-        role:      UserRole.admin,
-        status:    UserStatus.approved,
-        createdAt: DateTime.now(),
-        token:     'admin_token',
-      );
+    if (data['success'] == true) {
+      _user = AppUser.fromJson(data['user']);
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('user_data', jsonEncode({
-        'id': 'admin_1', 'name': 'Admin', 'phone': phone,
-        'district': 'All', 'village': '', 'role': 'admin',
-        'status': 'approved', 'created_at': DateTime.now().toIso8601String(),
-        'token': 'admin_token',
-      }));
+      await prefs.setString('user_data', jsonEncode(data['user']));
       _loading = false;
       notifyListeners();
       return true;
+    } else {
+      _error   = data['error'] ?? 'Registration failed';
+      _loading = false;
+      notifyListeners();
+      return false;
     }
-
-    // Check stored farmer
-    final prefs = await SharedPreferences.getInstance();
-    final data  = prefs.getString('user_data');
-    if (data != null) {
-      final json = jsonDecode(data);
-      if (json['phone'] == phone) {
-        _user = AppUser.fromJson(json);
-        _loading = false;
-        notifyListeners();
-        return true;
-      }
-    }
-
-    _error   = 'Invalid phone or password';
+  } catch (e) {
+    _error   = 'Could not connect to server. Try again.';
     _loading = false;
     notifyListeners();
     return false;
   }
+}
+
+  Future<bool> login({
+  required String phone,
+  required String password,
+}) async {
+  _loading = true;
+  _error   = '';
+  notifyListeners();
+
+  try {
+    final data = await ApiService.login(
+      phone:    phone,
+      password: password,
+    );
+
+    if (data['success'] == true) {
+      final userData    = Map<String, dynamic>.from(data['user']);
+      userData['token'] = data['token'];
+      _user             = AppUser.fromJson(userData);
+      final prefs       = await SharedPreferences.getInstance();
+      await prefs.setString('user_data', jsonEncode(userData));
+      _loading = false;
+      notifyListeners();
+      return true;
+    } else {
+      _error   = data['error'] ?? 'Invalid phone or password';
+      _loading = false;
+      notifyListeners();
+      return false;
+    }
+  } catch (e) {
+    _error   = 'Could not connect to server. Try again.';
+    _loading = false;
+    notifyListeners();
+    return false;
+  }
+}
 
   Future<void> logout() async {
     _user = null;

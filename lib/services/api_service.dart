@@ -49,6 +49,37 @@ class ApiService {
     throw Exception('Failed to load calendar');
   }
 
+static Future<Map<String, dynamic>> register({
+  required String name,
+  required String phone,
+  required String password,
+  required String district,
+  required String village,
+}) async {
+  final response = await http.post(
+    Uri.parse('$baseUrl/auth/register'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({
+      'name': name, 'phone': phone,
+      'password': password, 'district': district,
+      'village': village,
+    }),
+  ).timeout(const Duration(seconds: 10));
+  return jsonDecode(response.body);
+}
+
+static Future<Map<String, dynamic>> login({
+  required String phone,
+  required String password,
+}) async {
+  final response = await http.post(
+    Uri.parse('$baseUrl/auth/login'),
+    headers: {'Content-Type': 'application/json'},
+    body: jsonEncode({'phone': phone, 'password': password}),
+  ).timeout(const Duration(seconds: 10));
+  return jsonDecode(response.body);
+}
+
   static Future<List<Map<String, dynamic>>> getPriceTrend({
     required String district,
     required String commodity,
