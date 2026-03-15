@@ -40,7 +40,10 @@ class _AdminScreenState extends State<AdminScreen>
 
   Future<String?> _getToken() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('token');
+    final userData = prefs.getString('user_data');
+    if (userData == null) return null;
+    final Map<String, dynamic> data = jsonDecode(userData);
+    return data['token'];
   }
 
   Future<void> _loadAll() async {
