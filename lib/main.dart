@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'screens/home_screen.dart';
+import 'screens/splash_screen.dart';
 import 'screens/recommendation_screen.dart';
 import 'screens/price_trend_screen.dart';
 import 'providers/crop_provider.dart';
+import 'providers/auth_provider.dart';
+import 'theme/app_theme.dart';
 
 void main() {
   runApp(const CropAIApp());
@@ -16,25 +18,14 @@ class CropAIApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => CropProvider()),
       ],
       child: MaterialApp(
         title: 'CropAI',
         debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFF2E7D32),
-            brightness: Brightness.light,
-          ),
-          useMaterial3: true,
-          fontFamily: 'Roboto',
-          appBarTheme: const AppBarTheme(
-            backgroundColor: Color(0xFF2E7D32),
-            foregroundColor: Colors.white,
-            elevation: 0,
-          ),
-        ),
-        home: const HomeScreen(),
+        theme: AppTheme.theme,
+        home: const SplashScreen(),
         routes: {
           '/recommendations': (ctx) => const RecommendationScreen(),
           '/price-trend':     (ctx) => const PriceTrendScreen(),
